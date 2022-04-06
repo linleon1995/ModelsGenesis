@@ -7,9 +7,10 @@ class models_genesis_config:
     exp_name = model + "-" + suffix
     
     # data
-    data = "/mnt/dataset/shared/zongwei/LUNA16/Self_Learning_Cubes"
-    train_fold=[0,1,2,3,4]
-    valid_fold=[5,6]
+    data = "generated_cubes"
+    # train_fold=[0]
+    train_fold=[0,1]
+    valid_fold=[5]
     test_fold=[7,8,9]
     hu_min = -1000.0
     hu_max = 1000.0
@@ -21,15 +22,17 @@ class models_genesis_config:
     
     # model pre-training
     verbose = 1
+    # weights = 'pretrained_weights/Genesis_Chest_CT.pt'
+    # weights = 'pretrained_weights/Unet3D-genesis_chest_ct/run_015/ckpt-best.pt'
     weights = None
     batch_size = 6
     optimizer = "sgd"
     workers = 10
     max_queue_size = workers * 4
     save_samples = "png"
-    nb_epoch = 10000
+    nb_epoch = 200
     patience = 50
-    lr = 1
+    lr = 5e-5
 
     # image deformation
     nonlinear_rate = 0.9

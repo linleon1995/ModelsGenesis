@@ -7,6 +7,7 @@ import scipy
 import imageio
 import string
 import numpy as np
+from tqdm import tqdm
 from skimage.transform import resize
 try:  # SciPy >= 0.19
     from scipy.special import comb
@@ -156,8 +157,7 @@ def image_out_painting(x):
     return x
                 
 
-
-def generate_pair(img, batch_size, config, status="test"):
+def generate_pair(img, batch_size, config, status="test", seg_mode=False):
     img_rows, img_cols, img_deps = img.shape[2], img.shape[3], img.shape[4]
     while True:
         index = [i for i in range(img.shape[0])]
@@ -172,20 +172,21 @@ def generate_pair(img, batch_size, config, status="test"):
             # Flip
             x[n], y[n] = data_augmentation(x[n], y[n], config.flip_rate)
 
-            # Local Shuffle Pixel
-            x[n] = local_pixel_shuffling(x[n], prob=config.local_rate)
-            
-            # Apply non-Linear transformation with an assigned probability
-            x[n] = nonlinear_transformation(x[n], config.nonlinear_rate)
-            
-            # Inpainting & Outpainting
-            if random.random() < config.paint_rate:
-                if random.random() < config.inpaint_rate:
-                    # Inpainting
-                    x[n] = image_in_painting(x[n])
-                else:
-                    # Outpainting
-                    x[n] = image_out_painting(x[n])
+            if seg_mode:
+                # Local Shuffle Pixel
+                x[n] = local_pixel_shuffling(x[n], prob=config.local_rate)
+                
+                # Apply non-Linear transformation with an assigned probability
+                x[n] = nonlinear_transformation(x[n], config.nonlinear_rate)
+                
+                # Inpainting & Outpainting
+                if random.random() < config.paint_rate:
+                    if random.random() < config.inpaint_rate:
+                        # Inpainting
+                        x[n] = image_in_painting(x[n])
+                    else:
+                        # Outpainting
+                        x[n] = image_out_painting(x[n])
 
         # Save sample images module
         if config.save_samples is not None and status == "train" and random.random() < 0.01:
@@ -201,3 +202,16 @@ def generate_pair(img, batch_size, config, status="test"):
             imageio.imwrite(os.path.join(config.sample_path, config.exp_name, file_name), final_sample)
 
         yield (x, y)
+
+
+def create_training_path(train_logdir):
+    idx = 0
+    path = os.path.join(train_logdir, "run_{:03d}".format(idx))
+    while os.path.exists(path):
+        if len(os.listdir(path)) == 0:
+            break
+        idx += 1
+        path = os.path.join(train_logdir, "run_{:03d}".format(idx))
+    
+    os.makedirs(path, exist_ok=True)
+    return path

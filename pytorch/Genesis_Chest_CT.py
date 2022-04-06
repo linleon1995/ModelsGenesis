@@ -13,6 +13,7 @@ from utils import *
 import unet3d
 from config import models_genesis_config
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 print("torch = {}".format(torch.__version__))
 
@@ -28,6 +29,10 @@ for i,fold in enumerate(tqdm(conf.train_fold)):
     s = np.load(os.path.join(conf.data, file_name))
     x_train.extend(s)
 x_train = np.expand_dims(np.array(x_train), axis=1)
+
+for n in range(100):
+	plt.imshow(x_train[n,0,...,0])
+	plt.show()
 
 x_valid = []
 for i,fold in enumerate(tqdm(conf.valid_fold)):
