@@ -65,10 +65,13 @@ def _make_nConv(in_channel, depth, act, double_chnnel=False):
 #         return out
 
 class DownTransition(nn.Module):
-    def __init__(self, in_channel,depth, act):
+    def __init__(self, in_channel,depth, act, max_pool=True):
         super(DownTransition, self).__init__()
-        self.ops = _make_nConv(in_channel, depth,act)
-        self.maxpool = nn.MaxPool3d(2)
+        self.ops = _make_nConv(in_channel, depth, act)
+        if max_pool:
+            self.maxpool = nn.MaxPool3d(2)
+        else:
+            self.maxpool = nn.Identity()
         self.current_depth = depth
 
     def forward(self, x):
@@ -81,10 +84,14 @@ class DownTransition(nn.Module):
         return out, out_before_pool
 
 class UpTransition(nn.Module):
-    def __init__(self, inChans, outChans, depth,act):
+    def __init__(self, inChans, outChans, depth,act, upsample=True):
         super(UpTransition, self).__init__()
         self.depth = depth
-        self.up_conv = nn.ConvTranspose3d(inChans, outChans, kernel_size=2, stride=2)
+        if upsample:
+            # self.up_conv = nn.ConvTranspose3d(inChans, outChans, kernel_size=2, stride=2)
+            self.up_conv = nn.Upsample(scale_factor=2, mode='trilinear')
+        else:
+            self.up_conv = nn.Identity()
         self.ops = _make_nConv(inChans+ outChans//2,depth, act, double_chnnel=True)
 
     def forward(self, x, skip_x):

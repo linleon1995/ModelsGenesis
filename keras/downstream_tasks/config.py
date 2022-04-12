@@ -234,10 +234,12 @@ class ncs_config:
     arch = 'Vnet'
     
     # data
-    data = '/mnt/dataset/shared/zongwei/LIDC'
+    # data = '/mnt/dataset/shared/zongwei/LIDC'
+    data = 'data/ncs'
     input_rows = 64 
     input_cols = 64
     input_deps = 32
+    remove_zeros = True
     
     # model
     optimizer = 'adam'
@@ -366,3 +368,20 @@ class lcs_config:
             if not a.startswith("__") and not callable(getattr(self, a)) and not '_idx' in a:
                 print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
+
+
+if __name__ == '__main__':
+    
+    class set_args():
+        gpu = 0
+        data = None
+        apps = 'ncs'
+        run = 1
+        cv = None
+        subsetting = None
+        suffix = 'genesis'
+        task = 'segmentation'
+    
+    args = set_args()
+    conf = ncs_config(args)
+    print(3)

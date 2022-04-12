@@ -42,6 +42,8 @@ def compute_per_channel_dice(input, target, epsilon=1e-6, weight=None):
     target = torch.reshape(target, [target.size()[0], -1])
     target = target.float()
 
+    # print('target sum', target.sum(-1))
+
     # compute per channel Dice Coefficient
     intersect = (input * target).sum(-1)
     if weight is not None:
@@ -53,7 +55,9 @@ def compute_per_channel_dice(input, target, epsilon=1e-6, weight=None):
     denominator = input.sum(-1) + target.sum(-1)
     # dsc = 2 * (intersect / denominator.clamp(min=epsilon))
     dsc = (2*intersect + epsilon) / (denominator + epsilon)
-    # print(dsc)
+    # print('intersect', intersect)
+    # print('denominator', denominator)
+    # print('dsc', dsc, '\n')
     return torch.mean(dsc)
 
 
@@ -133,22 +137,22 @@ key = '32x64x64-10-shift-8'
 input_roots = [
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Image'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Image'),
-        #    os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
-        #    os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
+           os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
+           os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Image'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Image'),
-        #    os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
-        #    os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
+           os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
+           os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
                ]
 target_roots = [
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Mask'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Mask'),
-            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
-            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
+            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
+            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Mask'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Mask'),
-            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
-            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
+            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
+            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
                 ]
 
 train_loader, _ = build_dataset.build_dataloader(input_roots, target_roots, train_cases, train_batch_size=config.batch_size)
@@ -178,8 +182,8 @@ criterion = DiceLoss(normalization='none')
 # optimizer = torch.optim.SGD(model.parameters(), config.lr, momentum=0.9, weight_decay=0.0, nesterov=False)
 optimizer = torch.optim.Adam(model.parameters(), config.lr)
 # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(config.patience * 0.8), gamma=0.5)
-intial_epoch =0
-checkpoint_saving_steps = 10
+intial_epoch = 0
+checkpoint_saving_steps = 5
 checkpoint_path = os.path.join(config.model_path, config.exp_name)
 run_path = create_training_path(checkpoint_path)
 
@@ -215,18 +219,19 @@ for epoch in range(intial_epoch, config.nb_epoch):
         # loss = criterion(y, pred, smooth=1e-5)
         loss = criterion(pred, y)
 
-        x_np, y_np, pred_np = x.cpu().detach().numpy(), y.cpu().detach().numpy(), pred.cpu().detach().numpy()
-        pred_np = np.where(pred_np>0.5, 1, 0)
-        if batch_ndx%50 == 0:
-            for n in range(6):
-                for s in range(0, 32):
-                    if np.sum(y_np[n,0,...,s]) > 0:
-                        # print(np.sum(y_np[n,0,...,s]))
-                        plt.imshow(x_np[n,0,...,s], 'gray')
-                        plt.imshow(y_np[n,0,...,s]+2*pred_np[n,0,...,s], alpha=0.2, vmin=0, vmax=3)
-                        plt.title(f'n: {n} s: {s}')
-                        plt.savefig(f'figures/plot/train-{epoch}-{batch_ndx}-{n}-{s}.png')
-                        # plt.show()
+        # x_np, y_np, pred_np = x.cpu().detach().numpy(), y.cpu().detach().numpy(), pred.cpu().detach().numpy()
+        # pred_np = np.where(pred_np>0.5, 1, 0)
+        # if batch_ndx%1 == 0:
+        #     for n in range(6):
+        #         for s in range(0, 32):
+        #             if np.sum(y_np[n,0,...,s]) > 0:
+        #                 # print(np.sum(y_np[n,0,...,s]))
+        #                 plt.imshow(x_np[n,0,...,s], 'gray')
+        #                 # plt.imshow(y_np[n,0,...,s]+2*pred_np[n,0,...,s], alpha=0.2, vmin=0, vmax=3)
+        #                 plt.imshow(y_np[n,0,...,s], alpha=0.2, vmin=0, vmax=3)
+        #                 plt.title(f'n: {n} s: {s}')
+        #                 # plt.savefig(f'figures/plot/train-{epoch}-{batch_ndx}-{n}-{s}.png')
+        #                 plt.show()
 
         if batch_ndx%200 == 0:
             print(f'Step {batch_ndx} Loss {loss}')
@@ -237,7 +242,7 @@ for epoch in range(intial_epoch, config.nb_epoch):
 
     avg_loss = sum(losses)/len(losses)
     print(20*'-')
-    print(f'Epoch {epoch} Loss {avg_loss}')
+    print(f'Epoch {epoch} Loss {avg_loss}\n')
 
 
     checkpoint = {'state_dict': model.state_dict(),

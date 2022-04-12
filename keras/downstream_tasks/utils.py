@@ -11,6 +11,91 @@ from keras import backend as K
 from sklearn import metrics
 from keras.callbacks import LambdaCallback,TensorBoard,ReduceLROnPlateau
 
+###
+import logging
+
+def get_files(path, keys=[], return_fullpath=True, sort=True, sorting_key=None, recursive=True, get_dirs=False, ignore_suffix=False):
+    """Get all the file name under the given path with assigned keys
+    Args:
+        path: (str)
+        keys: (list, str)
+        return_fullpath: (bool)
+        sort: (bool)
+        sorting_key: (func)
+        recursive: The flag for searching path recursively or not(bool)
+    Return:
+        file_list: (list)
+    """
+    file_list = []
+    assert isinstance(keys, (list, str))
+    if isinstance(keys, str): keys = [keys]
+    # Rmove repeated keys
+    keys = list(set(keys))
+
+    def push_back_filelist(root, f, file_list, is_fullpath):
+        f = f[:-4] if ignore_suffix else f
+        if is_fullpath:
+            file_list.append(os.path.join(root, f))
+        else:
+            file_list.append(f)
+
+    for i, (root, dirs, files) in enumerate(os.walk(path)):
+        # print(root, dirs, files)
+        if not recursive:
+            if i > 0: break
+
+        if get_dirs:
+            files = dirs
+            
+        for j, f in enumerate(files):
+            if keys:
+                for key in keys:
+                    if key in f:
+                        push_back_filelist(root, f, file_list, return_fullpath)
+            else:
+                push_back_filelist(root, f, file_list, return_fullpath)
+
+    if file_list:
+        if sort: file_list.sort(key=sorting_key)
+    else:
+        f = 'dir' if get_dirs else 'file'
+        if keys: 
+            logging.warning(f'No {f} exist with key {keys}.') 
+        else: 
+            logging.warning(f'No {f} exist.') 
+    return file_list
+
+
+def get_samples(roots, cases):
+    samples = []
+    for root in roots:
+        samples.extend(get_files(root, keys=cases))
+    return samples
+
+
+def load_data(input_samples, target_samples, remove_zeros):
+    total_input_data, total_target = [], []
+    for idx, (x_path, y_path) in enumerate(zip(input_samples, target_samples)):
+        # print(idx)
+        input_data = np.load(x_path)
+        target = np.load(y_path)
+
+        if remove_zeros:
+            if not np.sum(target):
+                continue
+            
+        input_data, target = np.swapaxes(np.swapaxes(input_data, 0, 1), 1, 2), np.swapaxes(np.swapaxes(target, 0, 1), 1, 2)
+        input_data = input_data / 255
+        input_data, target = input_data[np.newaxis], target[np.newaxis]
+
+        total_input_data.append(input_data)
+        total_target.append(target)
+
+    total_input_data = np.concatenate(total_input_data, axis=0)
+    total_target = np.concatenate(total_target, axis=0)
+    return total_input_data, total_target
+###
+
 def augment_rician_noise(data_sample, noise_variance=(0, 0.1)):
     variance = random.uniform(noise_variance[0], noise_variance[1])
     data_sample = np.sqrt(
@@ -174,7 +259,7 @@ def segmentation_model_evaluation(model, config, x, y, note=None):
 # Module: Visualization
 ######
 
-def plot_image_truth_prediction(x, y, p, rows=12, cols=12):
+def plot_image_truth_prediction(x, y, p, rows=12, cols=12, name=None):
     x, y, p = np.squeeze(x), np.squeeze(y), np.squeeze(p>0.5)
     plt.rcParams.update({'font.size': 30})
     plt.figure(figsize=(25*3, 25))
@@ -200,7 +285,10 @@ def plot_image_truth_prediction(x, y, p, rows=12, cols=12):
     plt.subplot(1, 3, 3)
     plt.imshow(large_image, cmap='gray', vmin=0, vmax=1); plt.axis('off')
 
-    plt.show()
+    if name is not None:
+        plt.savefig(name)
+    else:
+        plt.show()      
     
     
 def plot_case(case_id=None, mris=None, segs=None, rows=10, cols=10, increment=38):
