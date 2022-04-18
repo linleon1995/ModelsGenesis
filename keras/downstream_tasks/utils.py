@@ -75,6 +75,7 @@ def get_samples(roots, cases):
 
 def load_data(input_samples, target_samples, remove_zeros):
     total_input_data, total_target = [], []
+    pid_dict = {}
     for idx, (x_path, y_path) in enumerate(zip(input_samples, target_samples)):
         # print(idx)
         input_data = np.load(x_path)
@@ -83,7 +84,16 @@ def load_data(input_samples, target_samples, remove_zeros):
         if remove_zeros:
             if not np.sum(target):
                 continue
-            
+
+        # if remove_shift:
+        #     file_name = os.path.split(x_path)[1][:-4]
+        #     pid = file_name.split('-')[-1]
+        #     case_num = int(file_name.split('-')[1])
+        #     if pid in pid_dict:
+        #         continue
+        #     else:
+        #         pid_dict[pid] = case_num
+
         input_data, target = np.swapaxes(np.swapaxes(input_data, 0, 1), 1, 2), np.swapaxes(np.swapaxes(target, 0, 1), 1, 2)
         input_data = input_data / 255
         input_data, target = input_data[np.newaxis], target[np.newaxis]
@@ -114,6 +124,22 @@ def augment_gaussian_noise(data_sample, noise_variance=(0, 0.1)):
 ######
 # Module: Evaluation metric
 ######
+def dice_eval(y_true, y_pred):
+    y_true = tf.where(tf.greater(y_true, 0.5), tf.ones_like(y_true), tf.zeros_like(y_true))
+    y_pred = tf.where(tf.greater(y_pred, 0.5), tf.ones_like(y_pred), tf.zeros_like(y_pred))
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+    summation = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred)
+    summation = tf.maximum(summation, 1e-10)
+
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    # print(y_true.shape, y_pred.shape, summation.shape)
+    # print(y_true_f.shape, y_pred_f.shape, intersection.shape)
+    iou = 2 * intersection / summation
+    return tf.minimum(iou, 1)
+
 def mean_iou(y_true, y_pred):
     prec = []
     for t in np.arange(0.5, 1.0, 0.05):
@@ -138,8 +164,8 @@ def bce_dice_loss(y_true, y_pred):
     return 0.5 * keras.losses.binary_crossentropy(y_true, y_pred) - dice_coef(y_true, y_pred)
 
 def iou(im1, im2):
-    overlap = (im1>0.5) * (im2>0.5)
-    union = (im1>0.5) + (im2>0.5)
+    overlap = np.uint8(im1>0.5) * np.uint8(im2>0.5)
+    union = np.uint8(im1>0.5) + np.uint8(im2>0.5) - overlap
     return overlap.sum()/float(union.sum())
         
 def dice(im1, im2, empty_score=1.0):
@@ -235,21 +261,29 @@ def classification_model_evaluation(model, config, x, y, note=None):
     
     print("[EVAL] AUC = {:.2f}%".format(100.0 * metrics.auc(fpr, tpr)))
 
+
 def segmentation_model_evaluation(model, config, x, y, note=None):
     model.compile(optimizer=config.optimizer, 
                   loss=dice_coef_loss, 
                   metrics=[mean_iou, 
-                           dice_coef],
+                           dice_eval],
                  )
     p = model.predict(x, verbose=config.verbose, batch_size=config.batch_size)
+
+    total_dice = 0
+    for p_sample, y_sample in zip(p, y):
+        total_dice += dice(p_sample, y_sample)
+    total_dice /= p.shape[0]
+    print(f'Dice {100*total_dice:.2f} %')
+
     eva = model.evaluate(x, y, verbose=config.verbose, batch_size=config.batch_size)
     if note is not None:
         print("[INFO] {}".format(note))
     print("x:  {} | {:.1f} ~ {:.1f}".format(x.shape, np.min(x), np.max(x)))
     print("y:  {} | {:.1f} ~ {:.1f}".format(y.shape, np.min(y), np.max(y)))
     print("p:  {} | {:.1f} ~ {:.1f}".format(p.shape, np.min(p), np.max(p)))
-    print("[BIN]  Dice = {:.2f}%".format(100.0 * dice(p, y)))
-    print("[BIN]  IoU  = {:.2f}%".format(100.0 * iou(p, y)))
+    # print("[BIN]  Dice = {:.2f}%".format(100.0 * dice(p, y)))
+    # print("[BIN]  IoU  = {:.2f}%".format(100.0 * iou(p, y)))
     print("[EVAL] Dice = {:.2f}%".format(100.0 * eva[-1]))
     print("[EVAL] IoU  = {:.2f}%".format(100.0 * eva[-2]))
     

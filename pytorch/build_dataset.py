@@ -53,7 +53,7 @@ def flip(x, y):
 def build_dataloader(input_roots, target_roots, train_cases, valid_cases=None, train_batch_size=1, pin_memory=True, 
                      num_workers=0, transform_config=None):
     input_load_func = target_load_func = np.load
-    transformer = flip
+    transformer = None
 
     def get_samples(roots, cases):
         samples = []
@@ -65,11 +65,11 @@ def build_dataloader(input_roots, target_roots, train_cases, valid_cases=None, t
     train_input_samples = get_samples(input_roots, train_cases)   
     train_target_samples = get_samples(target_roots, train_cases)   
 
-    # TODO: catch only foreground (for experiment)
-    for input_path, target_path in zip(train_input_samples, train_target_samples):
-        if np.sum(np.load(target_path)) <= 0:
-            train_input_samples.remove(input_path)
-            train_target_samples.remove(target_path)
+    # # TODO: catch only foreground (for experiment)
+    # for input_path, target_path in zip(train_input_samples, train_target_samples):
+    #     if np.sum(np.load(target_path)) <= 0:
+    #         train_input_samples.remove(input_path)
+    #         train_target_samples.remove(target_path)
             
     train_dataset = GeneralDataset(
         train_input_samples, train_target_samples, input_load_func, target_load_func, data_transformer=transformer)

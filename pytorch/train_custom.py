@@ -133,26 +133,27 @@ train_cases = [f'1m{idx:04d}' for idx in range(1, 37)] + [f'1B{idx:04d}' for idx
 #                 # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\TMH-Benign', key, 'Mask'),
 #                 ]
 
-key = '32x64x64-10-shift-8'
+# key = '32x64x64-10-shift-8'
+key = '32x64x64-10'
 input_roots = [
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Image'),
-            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Image'),
+            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Image'),
            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
-           os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
+        #    os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Image'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Image'),
-            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Image'),
+            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Image'),
            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
-           os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
+        #    os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Image'),
                ]
 target_roots = [
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Mask'),
-            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Mask'),
+            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'positive', 'Mask'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
-            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
+            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'positive', 'Mask'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Mask'),
-            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Mask'),
+            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant', 'crop', key, 'negative', 'Mask'),
             os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
-            os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
+            # os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Benign', 'crop', key, 'negative', 'Mask'),
                 ]
 
 train_loader, _ = build_dataset.build_dataloader(input_roots, target_roots, train_cases, train_batch_size=config.batch_size)
@@ -163,8 +164,9 @@ train_loader, _ = build_dataset.build_dataloader(input_roots, target_roots, trai
 
 # prepare the 3D model
 model = unet3d.UNet3D()
-
 #Load pre-trained weights
+# from torchsummary import summary
+# summary(model, (1, 64, 64, 32), device='cpu')
 
 if config.weights is not None:
     checkpoint = torch.load(config.weights)
@@ -176,12 +178,15 @@ if config.weights is not None:
     model.load_state_dict(unParalled_state_dict)
 
 model.to(device)
-model = nn.DataParallel(model, device_ids = [i for i in range(torch.cuda.device_count())])
-# criterion = torch_dice_coef_loss
-criterion = DiceLoss(normalization='none')
+# model = nn.DataParallel(model, device_ids = [i for i in range(torch.cuda.device_count())])
+from torchsummary import summary
+summary(model, (1, 64, 64, 32))
+
+criterion = torch_dice_coef_loss
+# criterion = DiceLoss(normalization='none')
 # optimizer = torch.optim.SGD(model.parameters(), config.lr, momentum=0.9, weight_decay=0.0, nesterov=False)
 optimizer = torch.optim.Adam(model.parameters(), config.lr)
-# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(config.patience * 0.8), gamma=0.5)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(config.patience * 0.8), gamma=0.5)
 intial_epoch = 0
 checkpoint_saving_steps = 5
 checkpoint_path = os.path.join(config.model_path, config.exp_name)
@@ -206,7 +211,7 @@ run_path = create_training_path(checkpoint_path)
 print('Start training')
 min_loss = 10000
 for epoch in range(intial_epoch, config.nb_epoch):
-    # scheduler.step(epoch)
+    scheduler.step(epoch)
     model.train()
     losses = []
     for batch_ndx, (x, y) in enumerate(train_loader):
@@ -217,7 +222,7 @@ for epoch in range(intial_epoch, config.nb_epoch):
         pred = model(x)
 
         # loss = criterion(y, pred, smooth=1e-5)
-        loss = criterion(pred, y)
+        loss = criterion(y, pred)
 
         # x_np, y_np, pred_np = x.cpu().detach().numpy(), y.cpu().detach().numpy(), pred.cpu().detach().numpy()
         # pred_np = np.where(pred_np>0.5, 1, 0)

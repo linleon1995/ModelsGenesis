@@ -239,14 +239,14 @@ class ncs_config:
     input_rows = 64 
     input_cols = 64
     input_deps = 32
-    remove_zeros = True
+    remove_zeros = False
     
     # model
     optimizer = 'adam'
     lr = 1e-3
     patience = 50
     verbose = 1
-    batch_size = 16
+    batch_size = 10
     workers = 1
     max_queue_size = workers * 1
     nb_epoch = 10000
@@ -295,6 +295,12 @@ class ncs_config:
                 print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
         
+    def save(self):
+        with open(os.path.join(self.model_path, 'config.txt'), 'w+') as fw:
+            for a in dir(self):
+                if not a.startswith("__") and not callable(getattr(self, a)):
+                    fw.write("{:30} {}".format(a, getattr(self, a)))
+                    fw.write('\n')
         
 class lcs_config:
     arch = 'Vnet'

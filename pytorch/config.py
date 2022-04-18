@@ -22,9 +22,9 @@ class models_genesis_config:
     
     # model pre-training
     verbose = 1
-    # weights = 'pretrained_weights/Genesis_Chest_CT.pt'
+    weights = 'pretrained_weights/Genesis_Chest_CT.pt'
     # weights = 'pretrained_weights/Unet3D-genesis_chest_ct/run_015/ckpt-best.pt'
-    weights = None
+    # weights = None
     batch_size = 6
     optimizer = "sgd"
     workers = 10
@@ -32,7 +32,7 @@ class models_genesis_config:
     save_samples = "png"
     nb_epoch = 200
     patience = 50
-    lr = 1e-4
+    lr = 1e-3
 
     # image deformation
     nonlinear_rate = 0.9

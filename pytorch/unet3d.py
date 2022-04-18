@@ -88,8 +88,8 @@ class UpTransition(nn.Module):
         super(UpTransition, self).__init__()
         self.depth = depth
         if upsample:
-            # self.up_conv = nn.ConvTranspose3d(inChans, outChans, kernel_size=2, stride=2)
-            self.up_conv = nn.Upsample(scale_factor=2, mode='trilinear')
+            self.up_conv = nn.ConvTranspose3d(inChans, outChans, kernel_size=2, stride=2)
+            # self.up_conv = nn.Upsample(scale_factor=2, mode='trilinear')
         else:
             self.up_conv = nn.Identity()
         self.ops = _make_nConv(inChans+ outChans//2,depth, act, double_chnnel=True)
